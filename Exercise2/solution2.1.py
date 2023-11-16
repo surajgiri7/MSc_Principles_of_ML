@@ -10,7 +10,6 @@ def remove_outliers():
     data = np.loadtxt('whDatadat.sec', dtype=object, comments='#', delimiter=None)
     w = data[:, 0].astype(float)
     h = data[:, 1].astype(float)   
-    print(len(w))
     max_dev = 2 # most common max deviation from the mean
     mean = np.mean(w) 
     standard_dev = np.std(w) 
@@ -24,11 +23,6 @@ def likelihood(X):
     """
     mean_value = np.mean(X, axis=0) # axis=0 for column-wise mean
     cov_matrix = np.cov(X, rowvar=False)  # Set rowvar=False for variables in columns
-    # Print the mean vector and covariance matrix
-    print("Mean Vector:")
-    print(mean_value)
-    print("\nCovariance Matrix:")
-    print(cov_matrix) 
     return mean_value,cov_matrix
 
 def pred(X, mean_values, cov_matrix, h):
@@ -56,10 +50,24 @@ def pred(X, mean_values, cov_matrix, h):
 
 if __name__ == "__main__":    
     data_wthout_outliers = remove_outliers() 
+    # Print the data matrix without outliers
+    print("Data matrix without outliers:")
+    print(data_wthout_outliers)
+    print("\n")
+
     mean_value,cov_matrix = likelihood(data_wthout_outliers) 
+    # Print the mean vector and covariance matrix
+    print("Mean Vector:")
+    print(mean_value)
+    print("Covariance Matrix:")
+    print(cov_matrix) 
+    print("\n")
+
     # Predicting the weight for a height of 140, 150, 160, 170, 180, 190, 200, 210
     h = [140, 150, 160, 170, 180, 190, 200, 210]
+    print("Prediction: ")
     for i in h:
         conditional_mean_w = pred(data_wthout_outliers, mean_value, cov_matrix, i)
-        print("\nPredicted weight for a height of ", i, " cm: ", conditional_mean_w, " kg.")
-
+        print("Predicted weight for a height of ", i, " cm: ", conditional_mean_w, " kg.")
+    print("\n")
+    
