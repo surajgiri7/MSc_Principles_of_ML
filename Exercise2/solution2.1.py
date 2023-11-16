@@ -61,5 +61,5 @@ if __name__ == "__main__":
     h = [140, 150, 160, 170, 180, 190, 200, 210]
     for i in h:
         conditional_mean_w = pred(data_wthout_outliers, mean_value, cov_matrix, i)
-        print("\nPredicted weight for a height of ", i, " cm: ", conditional_mean_w)
+        print("\nPredicted weight for a height of ", i, " cm: ", conditional_mean_w, " kg.")
 
