@@ -45,7 +45,7 @@ def pred(X, mean_values, cov_matrix, h):
     h_index = 0
     w_index = 1
     
-    # Calculate conditional expectation E[w|h]
+    # Calculating conditional expectation E[w|h]
     cov_hw = cov_matrix[h_index][w_index]
     cov_hh = cov_matrix[h_index][h_index]
     
@@ -54,11 +54,12 @@ def pred(X, mean_values, cov_matrix, h):
     return conditional_expectation
 
 
-data_wthout_outliers = remove_outliers() 
-mean_value,cov_matrix = likelihood(data_wthout_outliers) 
-# Predicting the weight for a height of 140, 150, 160, 170, 180, 190, 200, 210
-h = [140, 150, 160, 170, 180, 190, 200, 210]
-for i in h:
-    conditional_mean_w = pred(data_wthout_outliers, mean_value, cov_matrix, i)
-    print("\nPredicted weight for a height of ", i, " inches: ", conditional_mean_w)
+if __name__ == "__main__":    
+    data_wthout_outliers = remove_outliers() 
+    mean_value,cov_matrix = likelihood(data_wthout_outliers) 
+    # Predicting the weight for a height of 140, 150, 160, 170, 180, 190, 200, 210
+    h = [140, 150, 160, 170, 180, 190, 200, 210]
+    for i in h:
+        conditional_mean_w = pred(data_wthout_outliers, mean_value, cov_matrix, i)
+        print("\nPredicted weight for a height of ", i, " inches: ", conditional_mean_w)
 
