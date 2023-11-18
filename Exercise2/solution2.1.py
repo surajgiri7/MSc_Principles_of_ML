@@ -70,4 +70,6 @@ if __name__ == "__main__":
         conditional_mean_w = pred(data_wthout_outliers, mean_value, cov_matrix, i)
         print("Predicted weight for a height of ", i, " cm: ", conditional_mean_w, " kg.")
     print("\n")
+
+    # we observe that the 
     
