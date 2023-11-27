@@ -1,20 +1,15 @@
+import numpy as np
+
 def diffMatrix(u, v):
-    M = []
-    for u_i in u:
-        row = []
-        for v_j in v:
-            row.append(u_i - v_j)
-        M.append(row)
-    return M
+    u = np.array(u)[:, None]
+    v = np.array(v)
+    return u - v
 
 def prodMatrix(u, v):
-    M = []
-    for u_i in u:
-        row = []
-        for v_j in v:
-            row.append(u_i * v_j)
-        M.append(row)
-    return M
+    u = np.array(u)[:, None]
+    v = np.array(v)
+    return u * v
+
 
 if __name__ == '__main__':
     u = [1, 2, 3]
