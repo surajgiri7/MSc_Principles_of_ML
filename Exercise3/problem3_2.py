@@ -11,8 +11,11 @@ def prodMatrix(u, v):
     return u * v
 
 
-if __name__ == '__main__':
-    u = [1, 2, 3]
-    v = [4, 5, 6, 7]
+if __name__ == '__main__': 
+
+    num_uarray = 3 
+    num_varray = 6
+    u = np.arange(num_uarray) 
+    v = np.arange(num_varray) 
     print(diffMatrix(u, v))
     print(prodMatrix(u, v))
