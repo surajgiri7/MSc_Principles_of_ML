@@ -16,8 +16,7 @@ for t = 0, . . . , t_max - 1
 return Y
 
 where M = XZ^T(ZZ^T)^(-1) and Y = Z^T(ZZ^T)^(-1)
-"""
-"""
+
 procedure FW_kMEANS_VERSION2(X ∈Rm×n, k, Tmax)
 “randomly” initialize matrix M ∈R^(m×k)
 for T = 0, . . . , T_max −1
@@ -28,14 +27,16 @@ for T = 0, . . . , T_max −1
     M = XY
 return M, Y , Z
 """
+# Function to update Y based on Z and X
 def FW_UPDATE_Y(X, Y, Z, t_max):
     for t in range(t_max):
-        GX = 2 * (X @ Y @ Z @ Z.T - X @ Z.T)
+        G_Y = 2 * (X.T @ X @ Y @ Z @ Z.T - X.T @ X @ Z.T)
         for i in range(Y.shape[0]):
-            o = np.argmin(GX[:, i])
-            Y[i] = Y[i] + (t + 2) * (np.eye(Y.shape[0])[o] - Y[i])
+            o = np.argmin(G_Y[:, i])
+            Y[i] = Y[i] + (2 / (t + 2)) * (np.eye(Y.shape[0])[o] - Y[i])
     return Y
 
+# Modified k-means function using Frank-Wolfe
 def FW_kMeans_Version2(X, n_clusters, n_init=10, max_iter=300, t_Z=1, t_Y=100):
     best_inertia = np.inf
     best_centers = None
@@ -53,12 +54,11 @@ def FW_kMeans_Version2(X, n_clusters, n_init=10, max_iter=300, t_Z=1, t_Y=100):
                 break
             centers = new_centers
 
-        Z = np.zeros((n_clusters, X.shape[0]))
-        Z[np.arange(len(labels)), labels] = 1
-        Z = Z.T
-
+        Z = np.ones((n_clusters, X.shape[0])) / n_clusters
         Y = np.ones((X.shape[0], n_clusters)) / n_clusters
-        Y = FW_UPDATE_Y(X, Y, Z, t_Y)
+
+        Z = FW_UPDATE_Z(X, centers, Z, t_max=t_Z)
+        Y = FW_UPDATE_Y(X, Y, Z, t_max=t_Y)
 
         centers = X.T @ Y
 
@@ -70,11 +70,12 @@ def FW_kMeans_Version2(X, n_clusters, n_init=10, max_iter=300, t_Z=1, t_Y=100):
 
     return best_centers, best_labels
 
+
 file_path = './threeBlobs.csv'
 data = pd.read_csv(file_path, header=None, delimiter=',')
 data_2d = data.values.T
 
-centers, labels = FW_kMeans_Version2(data_2d, n_clusters=3)
+centers, labels = FW_kMeans_Version2(data_2d, n_clusters=3, t_Y=300)
 plt.scatter(data_2d[:, 0], data_2d[:, 1], c=labels, cmap='viridis')
 plt.scatter(centers[:, 0], centers[:, 1], marker='x', c='red', s=100)
 plt.title('Clustering Result - threeBlobs.csv')
