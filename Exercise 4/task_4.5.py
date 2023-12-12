@@ -2,67 +2,92 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def FW_UPDATE_Z(X, M, Z, t_max):
-    for t in range(t_max):
-        G_z = 2 * (M.T @ M @ Z - M.T @ X)
-        for i in range(Z.shape[0]):  
-            o = np.argmin(G_z[i, :]) 
-            Z[i, :] = Z[i, :] + (2 / (t + 2)) * (np.eye(Z.shape[1])[o] - Z[i, :])  # update the i-th row
-    return Z
+def FW_UPDATE_Z(X, centers):
+    distances = np.sqrt(((X - centers[:, np.newaxis]) ** 2).sum(axis=2))
+    return np.argmin(distances, axis=0)
 
+"""
+procedure FW_UPDATE_Y(X, Y = [y_1, . . . , y_k], Z, t_max)
+for t = 0, . . . , t_max - 1
+    G_Y = 2 [XᵀXY ZZᵀ−XᵀXZᵀ]
+    for i = 1, . . . , k
+        o = argmin_j[G_Y]_ji
+        y_i = y_i + (2/(t+2))[e_o −y_i]
+return Y
+
+where M = XZ^T(ZZ^T)^(-1) and Y = Z^T(ZZ^T)^(-1)
+"""
+"""
+procedure FW_kMEANS_VERSION2(X ∈Rm×n, k, Tmax)
+“randomly” initialize matrix M ∈R^(m×k)
+for T = 0, . . . , T_max −1
+    Z = (1/k)1_k×n
+    Z = FW_UPDATE_Z(X, M, Z, t_max = 1)
+    Y = (1/n) 1_n×k
+    Y = FW_UPDATE_Y(X, Y , Z, t_max = 100)
+    M = XY
+return M, Y , Z
+"""
 def FW_UPDATE_Y(X, Y, Z, t_max):
     for t in range(t_max):
-        G_y = 2 * (X.T @ X @ Y @ Z @ Z.T - X.T @ X @ Z.T)
-        for i in range(Y.shape[1]):
-            o = np.argmin(G_y[:, i])
-            Y[:, i] = Y[:, i] + (2 / (t + 2)) * (np.eye(Y.shape[0])[o] - Y[:, i])
+        GX = 2 * (X @ Y @ Z @ Z.T - X @ Z.T)
+        for i in range(Y.shape[0]):
+            o = np.argmin(GX[:, i])
+            Y[i] = Y[i] + (t + 2) * (np.eye(Y.shape[0])[o] - Y[i])
     return Y
 
-def FW_kMEANS_VERSION2(X, k, t_max):
-    m, n = X.shape
-    M = np.random.rand(m, k)
-    for _ in range(t_max):
-        Z = np.ones((k, n)) / k
-        Z = FW_UPDATE_Z(X, M, Z, t_max=1)
-        Y = np.ones((n, k)) / n
-        Y = FW_UPDATE_Y(X, Y, Z, t_max=100)
-        M = X @ Y
-    return M, Y, Z
+def FW_kMeans_Version2(X, n_clusters, n_init=10, max_iter=300, t_Z=1, t_Y=100):
+    best_inertia = np.inf
+    best_centers = None
+    best_labels = None
 
-if __name__ == "__main__":
-    # load data
-    data = pd.read_csv("threeBlobs.csv", header=None)
-    k = 3
-    if data.shape[0] < data.shape[1]:
-        X_blob = data.T.values  # Transpose if more columns than rows
-    else:
-        X_blob = data.values 
+    for _ in range(n_init):
+        initial_centers = X[np.random.choice(X.shape[0], n_clusters, replace=False)]
+        centers = initial_centers.copy()
+        labels = None
 
-    print(X_blob.shape)
-    print(X_blob)
+        for _ in range(max_iter):
+            labels = FW_UPDATE_Z(X, centers)
+            new_centers = np.array([X[labels == j].mean(axis=0) for j in range(n_clusters)])
+            if np.all(centers == new_centers):
+                break
+            centers = new_centers
 
-    # run k-means
-    M, Y, Z = FW_kMEANS_VERSION2(X_blob, k, 100)
-    # print(M.shape) # Centroids
-    # print(M)
-    # print(Y.shape) # Assignment matrix
-    # print(Y)
-    # print(Z.shape) # Clusters
-    # print(Z)
+        Z = np.zeros((n_clusters, X.shape[0]))
+        Z[np.arange(len(labels)), labels] = 1
+        Z = Z.T
 
-    # plot the result of k-means M, Y and Z
-    plt.figure(figsize=(10, 6))
-    colors = ['red', 'green', 'blue']  # Define colors for each cluster
-    for i in range(k):  # k is the number of clusters
-        plt.scatter(M[i, 0], M[i, 1], color=colors[i], marker='x', s=200, label=f'Centroid {i+1}')
-        plt.scatter(Y[:, i], Z[i, :], color=colors[i], marker='o', s=200, label=f'Cluster {i+1}')
-        plt.scatter(X_blob[:, 0], X_blob[:, 1], color=colors[i], label='Data points')
+        Y = np.ones((X.shape[0], n_clusters)) / n_clusters
+        Y = FW_UPDATE_Y(X, Y, Z, t_Y)
 
-    # plt.scatter(M[:, 0], M[:, 1], color='black', label='Data points')
-    plt.legend()
-    plt.title(f'k Means Clustering - unconventional k-means clustering (part 2)')
-    plt.xlabel('Feature 1')
-    plt.ylabel('Feature 2')
-    plt.tight_layout()
-    plt.show()
+        centers = X.T @ Y
+
+        inertia = sum(((X[labels == j] - centers.T[j]) ** 2).sum() for j in range(n_clusters))
+        if inertia < best_inertia:
+            best_inertia = inertia
+            best_centers = centers.T
+            best_labels = labels
+
+    return best_centers, best_labels
+
+file_path = './threeBlobs.csv'
+data = pd.read_csv(file_path, header=None, delimiter=',')
+data_2d = data.values.T
+
+centers, labels = FW_kMeans_Version2(data_2d, n_clusters=3)
+plt.scatter(data_2d[:, 0], data_2d[:, 1], c=labels, cmap='viridis')
+plt.scatter(centers[:, 0], centers[:, 1], marker='x', c='red', s=100)
+plt.title('Clustering Result - threeBlobs.csv')
+plt.show()
+
+# face_data = np.load('faceMatrix.npy')
+
+# face_centers, face_labels = FW_kMeans_Version2(face_data, n_clusters=10, t_Y=300)
+# fig, axs = plt.subplots(2, 5, figsize=(10, 5))
+# for i, ax in enumerate(axs.flatten()):
+#     ax.imshow(face_centers[i].reshape(64, 64).T, cmap='gray')
+#     ax.axis('off')
+# plt.suptitle('Mean Faces - faceMatrix.npy')
+# plt.show()
+
 
