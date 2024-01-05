@@ -1,43 +1,25 @@
+
+
+
+
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def FW_UPDATE_Z(X, centers):
+# update the cluster assignments
+def FW_update_Z(X, centers):
     distances = np.sqrt(((X - centers[:, np.newaxis]) ** 2).sum(axis=2))
     return np.argmin(distances, axis=0)
 
-"""
-procedure FW_UPDATE_Y(X, Y = [y_1, . . . , y_k], Z, t_max)
-for t = 0, . . . , t_max - 1
-    G_Y = 2 [XᵀXY ZZᵀ−XᵀXZᵀ]
-    for i = 1, . . . , k
-        o = argmin_j[G_Y]_ji
-        y_i = y_i + (2/(t+2))[e_o −y_i]
-return Y
-
-where M = XZ^T(ZZ^T)^(-1) and Y = Z^T(ZZ^T)^(-1)
-
-procedure FW_kMEANS_VERSION2(X ∈Rm×n, k, Tmax)
-“randomly” initialize matrix M ∈R^(m×k)
-for T = 0, . . . , T_max −1
-    Z = (1/k)1_k×n
-    Z = FW_UPDATE_Z(X, M, Z, t_max = 1)
-    Y = (1/n) 1_n×k
-    Y = FW_UPDATE_Y(X, Y , Z, t_max = 100)
-    M = XY
-return M, Y , Z
-"""
-# Function to update Y based on Z and X
-def FW_UPDATE_Y(X, Y, Z, t_max):
-    for t in range(t_max):
-        G_Y = 2 * (X.T @ X @ Y @ Z @ Z.T - X.T @ X @ Z.T)
-        for i in range(Y.shape[0]):
-            o = np.argmin(G_Y[:, i])
-            Y[i] = Y[i] + (2 / (t + 2)) * (np.eye(Y.shape[0])[o] - Y[i])
+def FW_update_Y(X, centers, labels, t_max):
+    for i in range(t_max):
+        for j in range(n_clusters):
+            Y[i,j] = np.sum(X[i] - centers[j]) ** 2
     return Y
 
-# Modified k-means function using Frank-Wolfe
-def FW_kMeans_Version2(X, n_clusters, n_init=10, max_iter=300, t_Z=1, t_Y=100):
+# k-means clustering
+def FW_kMeans_Version1(X, n_clusters, n_init=10, max_iter=300):
     best_inertia = np.inf
     best_centers = None
     best_labels = None
@@ -48,47 +30,56 @@ def FW_kMeans_Version2(X, n_clusters, n_init=10, max_iter=300, t_Z=1, t_Y=100):
         labels = None
 
         for _ in range(max_iter):
-            labels = FW_UPDATE_Z(X, centers)
+            labels = FW_update_Z(X, centers)
+            new_labels = np.zeros_like(labels)
+            for i in range(n_clusters):
+                
             new_centers = np.array([X[labels == j].mean(axis=0) for j in range(n_clusters)])
             if np.all(centers == new_centers):
                 break
             centers = new_centers
 
-        Z = np.ones((n_clusters, X.shape[0])) / n_clusters
-        Y = np.ones((X.shape[0], n_clusters)) / n_clusters
-
-        Z = FW_UPDATE_Z(X, centers, Z, t_max=t_Z)
-        Y = FW_UPDATE_Y(X, Y, Z, t_max=t_Y)
-
-        centers = X.T @ Y
-
-        inertia = sum(((X[labels == j] - centers.T[j]) ** 2).sum() for j in range(n_clusters))
+        inertia = sum(((X[labels == j] - centers[j]) ** 2).sum() for j in range(n_clusters))
         if inertia < best_inertia:
             best_inertia = inertia
-            best_centers = centers.T
+            best_centers = centers
             best_labels = labels
 
     return best_centers, best_labels
 
-
+# Load file
 file_path = './threeBlobs.csv'
 data = pd.read_csv(file_path, header=None, delimiter=',')
+
+# Reshape data into 2D
 data_2d = data.values.T
 
-centers, labels = FW_kMeans_Version2(data_2d, n_clusters=3, t_Y=300)
-plt.scatter(data_2d[:, 0], data_2d[:, 1], c=labels, cmap='viridis')
-plt.scatter(centers[:, 0], centers[:, 1], marker='x', c='red', s=100)
-plt.title('Clustering Result - threeBlobs.csv')
+# Perform k-means clustering
+n_clusters = 3
+cluster_centers_2d, labels_2d = FW_kMeans_Version1(data_2d, n_clusters)
+
+# Setting up the plot
+cluster_colors = ['orange','blue', 'green']
+data_markers = ['o'] * n_clusters  
+cluster_markers = ['s', 's', 's']  
+
+# Plot the results 
+plt.figure(figsize=(10, 8))
+
+for i in range(n_clusters):
+    plt.scatter(data_2d[labels_2d == i, 0], data_2d[labels_2d == i, 1], 
+                c=cluster_colors[i], marker=data_markers[i], label=f'Cluster {i}')
+
+for i, center in enumerate(cluster_centers_2d):
+    plt.scatter(center[0], center[1], 
+                c=cluster_colors[i], marker=cluster_markers[i], 
+                s=100, edgecolors='black', label=f'Center {i}')
+
+plt.title('2D K-Means Clustering with Custom Colors and Markers')
+plt.xlabel('X coordinate')
+plt.ylabel('Y coordinate')
+plt.legend()
 plt.show()
 
-# face_data = np.load('faceMatrix.npy')
-
-# face_centers, face_labels = FW_kMeans_Version2(face_data, n_clusters=10, t_Y=300)
-# fig, axs = plt.subplots(2, 5, figsize=(10, 5))
-# for i, ax in enumerate(axs.flatten()):
-#     ax.imshow(face_centers[i].reshape(64, 64).T, cmap='gray')
-#     ax.axis('off')
-# plt.suptitle('Mean Faces - faceMatrix.npy')
-# plt.show()
 
 
